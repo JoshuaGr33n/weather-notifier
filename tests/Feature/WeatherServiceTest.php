@@ -19,6 +19,9 @@ class WeatherServiceTest extends TestCase
     {
         parent::setUp();
         
+        // Create a user for testing
+        $this->user = User::factory()->create(); // Ensure you have users to test against
+
         // Mock the WeatherRepository
         $this->weatherRepository = Mockery::mock(WeatherRepository::class);
         $this->weatherService = new WeatherService($this->weatherRepository);
@@ -42,11 +45,11 @@ class WeatherServiceTest extends TestCase
             ->andReturn(0); // Return a UV index value (if necessary)
 
         // Call the method
-        $this->weatherService->checkWeatherAndNotify('London');
+        $this->weatherService->checkWeatherAndNotify($this->user, 'London', 10, 10); // Make sure to pass user thresholds
 
         // Assert that the notification was sent
         Notification::assertSentTo(
-            User::all(),
+            [$this->user], // Assert that notification is sent to the created user
             WeatherAlertNotification::class
         );
     }
@@ -69,9 +72,9 @@ class WeatherServiceTest extends TestCase
             ->andReturn(0); // Return a UV index value (if necessary)
 
         // Call the method
-        $this->weatherService->checkWeatherAndNotify('Paris');
+        $this->weatherService->checkWeatherAndNotify($this->user, 'Paris', 10, 10); // Use thresholds
 
         // Assert that no notification was sent
-        Notification::assertNotSentTo(User::all(), WeatherAlertNotification::class);
+        Notification::assertNotSentTo([$this->user], WeatherAlertNotification::class);
     }
 }

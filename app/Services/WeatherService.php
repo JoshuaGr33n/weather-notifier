@@ -16,7 +16,7 @@ class WeatherService
         $this->weatherRepository = $weatherRepository;
     }
 
-    public function checkWeatherAndNotify($city = 'London')
+    public function checkWeatherAndNotify($user, $city)
     {
         Log::info("Checking weather for {$city}");
         $weatherData = $this->weatherRepository->getWeatherData($city);
@@ -26,17 +26,8 @@ class WeatherService
             return;
         }
 
-        // $precipitation = $weatherData['rain']['1h'] ?? 0; // mm in the last hour
-        // $uvIndex = $this->weatherRepository->getUVIndex($weatherData['coord']['lat'], $weatherData['coord']['lon']);
-
-        // // Default threshold values for notifications
-        // $precipitationThreshold = 100; // example threshold
-        // $uvIndexThreshold = 800; // example threshold
-
-        // // If weather data exceeds thresholds, notify users
-        // if ($precipitation > $precipitationThreshold || $uvIndex > $uvIndexThreshold) {
-        //     $this->notifyUsers($precipitation, $uvIndex);
-        // }
+        $precipitationThreshold = $user->precipitation_threshold;
+        $uvIndexThreshold = $user->uv_index_threshold;
 
         $precipitation = isset($weatherData['rain']['1h']) ? $weatherData['rain']['1h'] : 0; // mm in the last hour
         Log::info("Precipitation: {$precipitation} mm");
@@ -45,24 +36,16 @@ class WeatherService
         $uvIndex = $this->weatherRepository->getUVIndex($weatherData['coord']['lat'], $weatherData['coord']['lon']);
         Log::info("UV Index: {$uvIndex}");
 
-        // Default threshold values for notifications
-        $precipitationThreshold = 10; 
-        $uvIndexThreshold = 10; 
-
         // If weather data exceeds thresholds, notify users
         if ($precipitation > $precipitationThreshold || $uvIndex > $uvIndexThreshold) {
-            $this->notifyUsers($precipitation, $uvIndex);
+            $this->notifyUsers($precipitation, $uvIndex, $city, $user);
         } else {
-            Log::info("No notification needed: Precipitation and UV Index are within limits.");
+            Log::info("No notification needed for {$city}: Precipitation and UV Index are within limits.");
         }
     }
 
-    private function notifyUsers($precipitation, $uvIndex)
+    private function notifyUsers($precipitation, $uvIndex, $city, $user)
     {
-        $users = User::all(); // Retrieve all users or filtered ones based on criteria
-
-        foreach ($users as $user) {
-            $user->notify(new WeatherAlertNotification($precipitation, $uvIndex));
-        }
+        $user->notify(new WeatherAlertNotification($city, $user->name, $precipitation, $uvIndex));
     }
 }

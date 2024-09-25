@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Services\WeatherService;
+use App\Models\User;
+
 
 class FetchWeatherData extends Command
 {
@@ -19,8 +21,16 @@ class FetchWeatherData extends Command
 
     public function handle()
     {
-        $city = 'London'; // This can later be dynamically set by the user
-        $this->weatherService->checkWeatherAndNotify($city);
+        $users = User::all(); 
+
+        foreach ($users as $user) {
+            $cities = $user->userCities; // Get cities for each user
+
+            foreach ($cities as $city) {
+                $this->weatherService->checkWeatherAndNotify($user,
+                    $city->city_name
+                );
+            }
+        }
     }
 }
-
