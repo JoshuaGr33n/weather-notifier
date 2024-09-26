@@ -1,6 +1,15 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import Welcome from '@/Components/Welcome.vue';
+import AveragedWeather from '@/Components/AveragedWeather.vue';
+
+// Props passed from the backend
+const props = defineProps({
+    cityName: String,
+    averagedWeather: {
+        type: Object,
+        default: () => ({}),  // Default to an empty object to avoid undefined errors
+    },
+});
 </script>
 
 <template>
@@ -14,7 +23,7 @@ import Welcome from '@/Components/Welcome.vue';
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                   
+                    <AveragedWeather :city="cityName" :weatherData="averagedWeather" />
                 </div>
             </div>
         </div>

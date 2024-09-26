@@ -1,17 +1,23 @@
-<?php 
+<?php
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\UserCity;
 use Illuminate\Support\Facades\Auth;
 
 class UserCityController extends Controller
 {
+    protected $user;
+
+    public function __construct()
+    {
+        $this->user = Auth::user();
+    }
+
     public function index()
     {
         // Get cities for the authenticated user
-        $userCities = Auth::user()->userCities;
+        $userCities = $this->user->userCities;
 
         return inertia('Profile/Partials/CityList', [
             'userCities' => $userCities,
@@ -21,14 +27,21 @@ class UserCityController extends Controller
     public function store(Request $request)
     {
         // Validate the city name
-        $request->validate([
-            'city_name' => 'required|string|max:255',
-        ]);
+        $this->validateCityName($request);
+
         // Add the city for the authenticated user
-        Auth::user()->userCities()->create([
+        $this->user->userCities()->create([
             'city_name' => $request->city_name,
         ]);
 
         return redirect()->route('user-cities.index');
+    }
+
+    // Helper method to validate the city name
+    private function validateCityName(Request $request)
+    {
+        $request->validate([
+            'city_name' => 'required|string|max:255',
+        ]);
     }
 }

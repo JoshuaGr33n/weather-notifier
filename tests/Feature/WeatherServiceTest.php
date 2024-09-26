@@ -1,13 +1,10 @@
-<?php 
+<?php
 
 namespace Tests\Unit;
 
 use Tests\TestCase;
 use App\Services\WeatherService;
 use App\Repositories\WeatherRepository;
-use Illuminate\Support\Facades\Notification;
-use App\Notifications\WeatherAlertNotification;
-use App\Models\User; 
 use Mockery;
 
 class WeatherServiceTest extends TestCase
@@ -18,63 +15,133 @@ class WeatherServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Create a user for testing
-        $this->user = User::factory()->create(); // Ensure you have users to test against
 
         // Mock the WeatherRepository
         $this->weatherRepository = Mockery::mock(WeatherRepository::class);
+
+        // Instantiate WeatherService with the mocked repository
         $this->weatherService = new WeatherService($this->weatherRepository);
     }
 
-    public function testCheckWeatherAndNotify()
+    public function testGetAveragedWeatherData()
     {
-        Notification::fake();
+        // Mock data for OpenWeather, WeatherAPI, and AccuWeather
+        $openWeatherData = [
+            'main' => ['temp' => 15],
+            'precipitation' => 0,
+            'uv_index' => 5
+        ];
 
-        // Simulate a case where the precipitation exceeds the threshold
+        $weatherApiData = [
+            'main' => ['temp' => 20],
+            'precipitation' => 10,
+            'uv_index' => 6
+        ];
+
+        $accuWeatherData = [
+            'main' => ['temp' => 25],
+            'precipitation' => 20,
+            'uv_index' => 7
+        ];
+
+        // The expectations for each API
         $this->weatherRepository
-            ->shouldReceive('getWeatherData')
+            ->shouldReceive('getOpenWeatherData')
             ->with('London')
+            ->andReturn($openWeatherData);
+
+        $this->weatherRepository
+            ->shouldReceive('getWeatherApiData')
+            ->with('London')
+            ->andReturn($weatherApiData);
+
+        $this->weatherRepository
+            ->shouldReceive('getAccuWeatherData')
+            ->with('London')
+            ->andReturn($accuWeatherData);
+
+        // Expect the extraction of weather details for each data source
+        $this->weatherRepository
+            ->shouldReceive('extractWeatherDetails')
+            ->with($openWeatherData, 'openweather')
             ->andReturn([
-                'rain' => ['1h' => 101], // Exceeds threshold
-                'coord' => ['lat' => 51.5085, 'lon' => -0.1257],
+                'temp' => 15,
+                'precipitation' => 0,
+                'uv_index' => 5,
             ]);
 
         $this->weatherRepository
-            ->shouldReceive('getUVIndex')
-            ->andReturn(0); // Return a UV index value (if necessary)
+            ->shouldReceive('extractWeatherDetails')
+            ->with($weatherApiData, 'weatherapi')
+            ->andReturn([
+                'temp' => 20,
+                'precipitation' => 10,
+                'uv_index' => 6,
+            ]);
 
-        // Call the method
-        $this->weatherService->checkWeatherAndNotify($this->user, 'London', 10, 10); // Make sure to pass user thresholds
+        $this->weatherRepository
+            ->shouldReceive('extractWeatherDetails')
+            ->with($accuWeatherData, 'accuweather')
+            ->andReturn([
+                'temp' => 25,
+                'precipitation' => 20,
+                'uv_index' => 7,
+            ]);
 
-        // Assert that the notification was sent
-        Notification::assertSentTo(
-            [$this->user], // Assert that notification is sent to the created user
-            WeatherAlertNotification::class
-        );
+        // Simulate averaging calculations
+        $this->weatherRepository
+            ->shouldReceive('average')
+            ->with([15, 20, 25])
+            ->andReturn(20); // Average temp
+
+        $this->weatherRepository
+            ->shouldReceive('average')
+            ->with([0, 10, 20])
+            ->andReturn(10); // Average precipitation
+
+        $this->weatherRepository
+            ->shouldReceive('average')
+            ->with([5, 6, 7])
+            ->andReturn(6); // Average UV index
+
+        //  the service method
+        $averagedWeatherData = $this->weatherService->getAveragedWeatherData('London');
+
+        // Assert the averages returned by getAveragedWeatherData
+        $this->assertEquals([
+            'temp' => 20,
+            'precipitation' => 10,
+            'uv_index' => 6,
+        ], $averagedWeatherData);
     }
 
-    public function testNoNotificationWhenUnderThreshold()
+    public function testGetAveragedWeatherDataWithNoData()
     {
-        Notification::fake();
-
-        // Simulate a case where the precipitation does not exceed the threshold
+        // Return null or empty results for all API calls
         $this->weatherRepository
-            ->shouldReceive('getWeatherData')
-            ->with('Paris')
-            ->andReturn([
-                'rain' => ['1h' => 0], // Under threshold
-                'coord' => ['lat' => 48.8566, 'lon' => 2.3522],
-            ]);
+            ->shouldReceive('getOpenWeatherData')
+            ->with('London')
+            ->andReturn(null);
 
         $this->weatherRepository
-            ->shouldReceive('getUVIndex')
-            ->andReturn(0); // Return a UV index value (if necessary)
+            ->shouldReceive('getWeatherApiData')
+            ->with('London')
+            ->andReturn(null);
 
-        // Call the method
-        $this->weatherService->checkWeatherAndNotify($this->user, 'Paris', 10, 10); // Use thresholds
+        $this->weatherRepository
+            ->shouldReceive('getAccuWeatherData')
+            ->with('London')
+            ->andReturn(null);
 
-        // Assert that no notification was sent
-        Notification::assertNotSentTo([$this->user], WeatherAlertNotification::class);
+        // Expect empty weather details extraction
+        $this->weatherRepository
+            ->shouldReceive('extractWeatherDetails')
+            ->andReturn(null);
+
+        // Call the service method with no data
+        $averagedWeatherData = $this->weatherService->getAveragedWeatherData('London');
+
+        // Assert that no data is returned
+        $this->assertNull($averagedWeatherData);
     }
 }

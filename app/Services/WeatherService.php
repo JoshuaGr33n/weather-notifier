@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Repositories\WeatherRepository;
 use App\Notifications\WeatherAlertNotification;
-use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
 
 class WeatherService
 {
@@ -16,36 +16,32 @@ class WeatherService
         $this->weatherRepository = $weatherRepository;
     }
 
-    public function checkWeatherAndNotify($user, $city)
+    // Function to calculate average temperature, precipitation, etc.
+    public function getAveragedWeatherData($city)
     {
-        Log::info("Checking weather for {$city}");
-        $weatherData = $this->weatherRepository->getWeatherData($city);
+        $openWeatherData = $this->weatherRepository->getOpenWeatherData($city);
+        $weatherApiData = $this->weatherRepository->getWeatherApiData($city);
+        $accuWeatherData = $this->weatherRepository->getAccuWeatherData($city);
 
-        if (!$weatherData) {
-            Log::warning("No weather data found for {$city}");
-            return;
+        $openWeather = $this->weatherRepository->extractWeatherDetails($openWeatherData, 'openweather');
+        $weatherApi = $this->weatherRepository->extractWeatherDetails($weatherApiData, 'weatherapi');
+        $accuWeather = $this->weatherRepository->extractWeatherDetails($accuWeatherData, 'accuweather');
+
+        $weatherData = [$openWeather, $weatherApi, $accuWeather];
+        $filteredData = array_filter($weatherData); // Remove null responses
+
+        if (empty($filteredData)) {
+            return null; // If no valid data from any service
         }
 
-        $precipitationThreshold = $user->precipitation_threshold;
-        $uvIndexThreshold = $user->uv_index_threshold;
+        $averageTemp = $this->weatherRepository->average(array_column($filteredData, 'temp'));
+        $averagePrecipitation = $this->weatherRepository->average(array_column($filteredData, 'precipitation'));
+        $averageUV = $this->weatherRepository->average(array_column($filteredData, 'uv_index'));
 
-        $precipitation = isset($weatherData['rain']['1h']) ? $weatherData['rain']['1h'] : 0; // mm in the last hour
-        Log::info("Precipitation: {$precipitation} mm");
-
-        // Get UV index
-        $uvIndex = $this->weatherRepository->getUVIndex($weatherData['coord']['lat'], $weatherData['coord']['lon']);
-        Log::info("UV Index: {$uvIndex}");
-
-        // If weather data exceeds thresholds, notify users
-        if ($precipitation > $precipitationThreshold || $uvIndex > $uvIndexThreshold) {
-            $this->notifyUsers($precipitation, $uvIndex, $city, $user);
-        } else {
-            Log::info("No notification needed for {$city}: Precipitation and UV Index are within limits.");
-        }
-    }
-
-    private function notifyUsers($precipitation, $uvIndex, $city, $user)
-    {
-        $user->notify(new WeatherAlertNotification($city, $user->name, $precipitation, $uvIndex));
+        return [
+            'temp' => $averageTemp,
+            'precipitation' => $averagePrecipitation,
+            'uv_index' => $averageUV,
+        ];
     }
 }

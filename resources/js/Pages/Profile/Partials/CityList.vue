@@ -33,7 +33,7 @@ const addCity = () => {
         <template #header>
             Add your preferred cities for weather notifications.
         </template>
-        <FormSection @submitted="addCity" class="mt-4">
+        <FormSection @submitted="addCity" class="mt-4 mr-20">
             <template #form>
                 <div class="col-span-6 sm:col-span-4">
                     <InputLabel for="city_name" value="City Name" />

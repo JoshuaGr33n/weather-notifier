@@ -26,8 +26,8 @@ function handleImageError() {
             <div class="max-w-4xl mx-auto p-6 sm:p-8 bg-white shadow-lg rounded-lg dark:bg-gray-800">
                 <header class="text-center mb-8  flex flex-col items-center mb-8">
                     <AuthenticationCardLogo />
-                    <h1 class="text-4xl font-bold">Welcome to YourApp</h1>
-                    <p class="text-lg text-gray-500">Your tagline or mission statement goes here.</p>
+                    <h1 class="text-4xl font-bold">Weather Notifier App</h1>
+                    <p class="text-lg text-gray-500">Best Weather Notifier</p>
                 </header>
 
                 <div class="flex justify-center space-x-4">
@@ -44,12 +44,4 @@ function handleImageError() {
     </AuthenticationCard>
 </template>
 
-<style scoped>
-.btn-primary {
-    @apply bg-red-600 text-white font-semibold py-2 px-4 rounded-md transition hover:bg-red-500;
-}
 
-.btn-secondary {
-    @apply bg-gray-700 text-white font-semibold py-2 px-4 rounded-md transition hover:bg-gray-600;
-}
-</style>

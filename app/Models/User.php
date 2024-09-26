@@ -31,6 +31,7 @@ class User extends Authenticatable
         'password',
         'precipitation_threshold',
         'uv_index_threshold',
+        'notification_paused_until',
       
     ];
 
@@ -65,6 +66,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'notification_paused_until' => 'datetime',
         ];
     }
 
